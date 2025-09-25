@@ -1,6 +1,29 @@
 ﻿#include "PasswordManager.h"
 #include <iostream>
 #include <sstream>
+#include <windows.h>
+
+// --- Helper: set console color ---
+void setConsoleColor(const std::wstring& color) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (color == L"red") {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
+    }
+    else if (color == L"green") {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    }
+    else if (color == L"blue") {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    }
+    else if (color == L"yellow") {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    }
+    else {
+        // default color
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
+}
 
 // --- Root entries ---
 void PasswordManager::addRootEntry(const std::wstring& url,
@@ -151,47 +174,58 @@ PasswordEntry* PasswordManager::findEntryInGroup(const std::wstring& path,
     return nullptr;
 }
 
-// --- Recursive display ---
+// --- Recursive display with colors and notes ---
 void PasswordManager::listGroupRecursive(const GroupEntry& group, const std::wstring& prefix, bool isLast) const {
     // Выводим название группы
     std::wcout << prefix << (isLast ? L"└─ " : L"├─ ") << group.groupName << L"/" << std::endl;
 
-    // Вычисляем новый префикс для содержимого группы
+    // Новый префикс для содержимого группы
     std::wstring childPrefix = prefix + (isLast ? L"    " : L"│   ");
 
-    // Выводим записи в группе
+    // Вывод записей
     for (size_t i = 0; i < group.entries.size(); ++i) {
         bool lastEntry = (i == group.entries.size() - 1) && group.subGroups.empty();
-        std::wcout << childPrefix
-            << (lastEntry ? L"└─ " : L"├─ ")
-            << group.entries[i].url << L" (" << group.entries[i].login << L")"
-            << std::endl;
+        std::wcout << childPrefix << (lastEntry ? L"└─ " : L"├─ ");
+
+        setConsoleColor(group.entries[i].color);
+        std::wcout << group.entries[i].url << L" (" << group.entries[i].login << L")";
+        setConsoleColor(L"default");
+
+        if (!group.entries[i].note.empty()) {
+            std::wcout << L" - " << group.entries[i].note;
+        }
+        std::wcout << std::endl;
     }
 
-    // Выводим подгруппы
+    // Вывод подгрупп
     for (size_t i = 0; i < group.subGroups.size(); ++i) {
         bool lastSubGroup = (i == group.subGroups.size() - 1);
         listGroupRecursive(group.subGroups[i], childPrefix, lastSubGroup);
     }
 }
 
-// --- Display all ---
+// --- Display all entries ---
 void PasswordManager::listAllEntries() const {
     std::wcout << L"Root/" << std::endl;
 
-    // Выводим записи в Root
+    // Root entries
     for (size_t i = 0; i < rootEntries.size(); ++i) {
         bool lastRootEntry = (i == rootEntries.size() - 1) && groups.empty();
-        std::wcout << (lastRootEntry ? L"└─ " : L"├─ ")
-            << rootEntries[i].url << L" (" << rootEntries[i].login << L")" << std::endl;
+        std::wcout << (lastRootEntry ? L"└─ " : L"├─ ");
+
+        setConsoleColor(rootEntries[i].color);
+        std::wcout << rootEntries[i].url << L" (" << rootEntries[i].login << L")";
+        setConsoleColor(L"default");
+
+        if (!rootEntries[i].note.empty()) {
+            std::wcout << L" - " << rootEntries[i].note;
+        }
+        std::wcout << std::endl;
     }
 
-    // Выводим группы
+    // Top-level groups
     for (size_t i = 0; i < groups.size(); ++i) {
         bool lastGroup = (i == groups.size() - 1);
         listGroupRecursive(groups[i], L"", lastGroup);
     }
 }
-
-
-
