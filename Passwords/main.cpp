@@ -1,24 +1,33 @@
 ﻿#include "PasswordManager.h"
 #include <windows.h>
 #include <iostream>
+#include <io.h>
+#include <fcntl.h>
 
 int main() {
+    _setmode(_fileno(stdout), _O_U16TEXT);
+    _setmode(_fileno(stdin), _O_U16TEXT);
+
     PasswordManager manager;
 
     // Root entries
-    manager.addRootEntry("https://gmail.com", "gleb123", "pass123");
+    manager.addRootEntry(L"https://gmail.com", L"gleb123", L"pass123");
 
     // Nested groups
-    manager.addGroup("Work/ProjectA");
-    manager.addGroup("Work/ProjectB");
-    manager.addGroup("Personal/Social");
+    manager.addGroup(L"Work/ProjectA");
+    manager.addGroup(L"Work/ProjectB");
+    manager.addGroup(L"Personal/");
+    manager.addGroup(L"Personal/Social");
 
     // Entries in groups
-    manager.addEntryToGroup("Work/ProjectA", "https://github.com", "gleb_work", "workPass");
-    manager.addEntryToGroup("Work/ProjectB", "https://jira.com", "gleb_jira", "jiraPass");
-    manager.addEntryToGroup("Personal/Social", "https://vk.com", "gleb_vk", "vkPass");
+    manager.addEntryToGroup(L"Work/ProjectA", L"https://github.com", L"gleb_work", L"workPass");
+    manager.addEntryToGroup(L"Work/", L"https://jira.com", L"gleb_jira", L"jiraPass");
+    manager.addEntryToGroup(L"Personal/Social", L"https://vk.com", L"gleb_vk", L"vkPass");
+    manager.addEntryToGroup(L"Personal/", L"https://vk.com", L"gleb_vk", L"vkPass");
+    manager.addEntryToGroup(L"Personal/", L"https://vk.com", L"gleb_vk", L"vkPass");
+    manager.addEntryToGroup(L"Personal/Social", L"https://vk.com", L"gleb_vk", L"vkPass");
 
-    // Display
+    // Display all entries
     manager.listAllEntries();
 
     return 0;

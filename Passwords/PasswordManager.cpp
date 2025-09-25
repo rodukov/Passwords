@@ -3,15 +3,15 @@
 #include <sstream>
 
 // --- Root entries ---
-void PasswordManager::addRootEntry(const std::string& url,
-                                   const std::string& login,
-                                   const std::string& password,
-                                   const std::string& note,
-                                   const std::string& color) {
-    rootEntries.push_back({url, login, password, note, color});
+void PasswordManager::addRootEntry(const std::wstring& url,
+    const std::wstring& login,
+    const std::wstring& password,
+    const std::wstring& note,
+    const std::wstring& color) {
+    rootEntries.push_back({ url, login, password, note, color });
 }
 
-bool PasswordManager::removeRootEntry(const std::string& url, const std::string& login) {
+bool PasswordManager::removeRootEntry(const std::wstring& url, const std::wstring& login) {
     for (auto it = rootEntries.begin(); it != rootEntries.end(); ++it) {
         if (it->url == url && it->login == login) {
             rootEntries.erase(it);
@@ -21,7 +21,7 @@ bool PasswordManager::removeRootEntry(const std::string& url, const std::string&
     return false;
 }
 
-PasswordEntry* PasswordManager::findRootEntry(const std::string& url, const std::string& login) {
+PasswordEntry* PasswordManager::findRootEntry(const std::wstring& url, const std::wstring& login) {
     for (auto& entry : rootEntries) {
         if (entry.url == url && entry.login == login) return &entry;
     }
@@ -29,20 +29,20 @@ PasswordEntry* PasswordManager::findRootEntry(const std::string& url, const std:
 }
 
 // --- Helper to split path ---
-static std::vector<std::string> splitPath(const std::string& path) {
-    std::vector<std::string> parts;
-    std::stringstream ss(path);
-    std::string item;
-    while (std::getline(ss, item, '/')) {
+static std::vector<std::wstring> splitPath(const std::wstring& path) {
+    std::vector<std::wstring> parts;
+    std::wstringstream ss(path);
+    std::wstring item;
+    while (std::getline(ss, item, L'/')) {
         if (!item.empty()) parts.push_back(item);
     }
     return parts;
 }
 
 // --- Recursive find group ---
-GroupEntry* PasswordManager::findGroupRecursive(std::vector<GroupEntry>& groups, const std::string& path) {
+GroupEntry* PasswordManager::findGroupRecursive(std::vector<GroupEntry>& groupsVec, const std::wstring& path) {
     auto parts = splitPath(path);
-    std::vector<GroupEntry>* current = &groups;
+    std::vector<GroupEntry>* current = &groupsVec;
     GroupEntry* group = nullptr;
 
     for (auto& part : parts) {
@@ -59,12 +59,12 @@ GroupEntry* PasswordManager::findGroupRecursive(std::vector<GroupEntry>& groups,
     return group;
 }
 
-GroupEntry* PasswordManager::findGroup(const std::string& path) {
+GroupEntry* PasswordManager::findGroup(const std::wstring& path) {
     return findGroupRecursive(groups, path);
 }
 
 // --- Add group with nested support ---
-void PasswordManager::addGroup(const std::string& path) {
+void PasswordManager::addGroup(const std::wstring& path) {
     auto parts = splitPath(path);
     std::vector<GroupEntry>* current = &groups;
     GroupEntry* group = nullptr;
@@ -78,14 +78,14 @@ void PasswordManager::addGroup(const std::string& path) {
             }
         }
         if (!group) { // create new if not exist
-            current->push_back({part, {}, {}});
+            current->push_back({ part, {}, {} });
             group = &current->back();
         }
         current = &group->subGroups;
     }
 }
 
-bool PasswordManager::removeGroup(const std::string& path) {
+bool PasswordManager::removeGroup(const std::wstring& path) {
     auto parts = splitPath(path);
     if (parts.empty()) return false;
 
@@ -112,21 +112,21 @@ bool PasswordManager::removeGroup(const std::string& path) {
 }
 
 // --- Add entry to group ---
-void PasswordManager::addEntryToGroup(const std::string& path,
-                                      const std::string& url,
-                                      const std::string& login,
-                                      const std::string& password,
-                                      const std::string& note,
-                                      const std::string& color) {
+void PasswordManager::addEntryToGroup(const std::wstring& path,
+    const std::wstring& url,
+    const std::wstring& login,
+    const std::wstring& password,
+    const std::wstring& note,
+    const std::wstring& color) {
     GroupEntry* group = findGroup(path);
     if (group) {
-        group->entries.push_back({url, login, password, note, color});
+        group->entries.push_back({ url, login, password, note, color });
     }
 }
 
-bool PasswordManager::removeEntryFromGroup(const std::string& path,
-                                           const std::string& url,
-                                           const std::string& login) {
+bool PasswordManager::removeEntryFromGroup(const std::wstring& path,
+    const std::wstring& url,
+    const std::wstring& login) {
     GroupEntry* group = findGroup(path);
     if (group) {
         for (auto it = group->entries.begin(); it != group->entries.end(); ++it) {
@@ -139,9 +139,9 @@ bool PasswordManager::removeEntryFromGroup(const std::string& path,
     return false;
 }
 
-PasswordEntry* PasswordManager::findEntryInGroup(const std::string& path,
-                                                 const std::string& url,
-                                                 const std::string& login) {
+PasswordEntry* PasswordManager::findEntryInGroup(const std::wstring& path,
+    const std::wstring& url,
+    const std::wstring& login) {
     GroupEntry* group = findGroup(path);
     if (group) {
         for (auto& entry : group->entries) {
@@ -152,26 +152,46 @@ PasswordEntry* PasswordManager::findEntryInGroup(const std::string& path,
 }
 
 // --- Recursive display ---
-void PasswordManager::listGroupRecursive(const GroupEntry& group, const std::string& prefix) const {
-    std::cout << prefix << group.groupName << "/" << std::endl;
+void PasswordManager::listGroupRecursive(const GroupEntry& group, const std::wstring& prefix, bool isLast) const {
+    // Выводим название группы
+    std::wcout << prefix << (isLast ? L"└─ " : L"├─ ") << group.groupName << L"/" << std::endl;
 
+    // Вычисляем новый префикс для содержимого группы
+    std::wstring childPrefix = prefix + (isLast ? L"    " : L"│   ");
+
+    // Выводим записи в группе
     for (size_t i = 0; i < group.entries.size(); ++i) {
-        std::cout << prefix << "├─ " << group.entries[i].url << " (" << group.entries[i].login << ")" << std::endl;
+        bool lastEntry = (i == group.entries.size() - 1) && group.subGroups.empty();
+        std::wcout << childPrefix
+            << (lastEntry ? L"└─ " : L"├─ ")
+            << group.entries[i].url << L" (" << group.entries[i].login << L")"
+            << std::endl;
     }
 
+    // Выводим подгруппы
     for (size_t i = 0; i < group.subGroups.size(); ++i) {
-        listGroupRecursive(group.subGroups[i], prefix + "│  ");
+        bool lastSubGroup = (i == group.subGroups.size() - 1);
+        listGroupRecursive(group.subGroups[i], childPrefix, lastSubGroup);
     }
 }
 
 // --- Display all ---
 void PasswordManager::listAllEntries() const {
-    std::cout << "Root/" << std::endl;
-    for (const auto& entry : rootEntries) {
-        std::cout << "├─ " << entry.url << " (" << entry.login << ")" << std::endl;
+    std::wcout << L"Root/" << std::endl;
+
+    // Выводим записи в Root
+    for (size_t i = 0; i < rootEntries.size(); ++i) {
+        bool lastRootEntry = (i == rootEntries.size() - 1) && groups.empty();
+        std::wcout << (lastRootEntry ? L"└─ " : L"├─ ")
+            << rootEntries[i].url << L" (" << rootEntries[i].login << L")" << std::endl;
     }
 
-    for (const auto& group : groups) {
-        listGroupRecursive(group, "│  ");
+    // Выводим группы
+    for (size_t i = 0; i < groups.size(); ++i) {
+        bool lastGroup = (i == groups.size() - 1);
+        listGroupRecursive(groups[i], L"", lastGroup);
     }
 }
+
+
+
